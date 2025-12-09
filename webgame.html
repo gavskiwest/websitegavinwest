@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alpine Rush: Pro Edition</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #1a1a2e; /* Darker background for contrast */
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        /* The Back Button */
+        #back-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background-color: #e74c3c;
+            color: white;
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-weight: bold;
+            box-shadow: 0 4px 0 #c0392b;
+            transition: transform 0.1s;
+            z-index: 100; /* On top of everything */
+        }
+        #back-btn:active {
+            transform: translateY(4px);
+            box-shadow: none;
+        }
+
+        #game-container {
+            position: relative;
+            width: 900px;
+            height: 700px;
+            background-color: #deeef5; /* Powder color */
+            border: 8px solid #34495e;
+            border-radius: 12px;
+            box-shadow: 0 0 50px rgba(0,0,0,0.6);
+            overflow: hidden;
+        }
+
+        canvas { display: block; }
+
+        /* UI Overlays */
+        .ui-layer {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(26, 26, 46, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            z-index: 10;
+        }
+
+        .hidden { display: none !important; }
+
+        h1 {
+            font-size: 3.5rem;
+            margin-bottom: 5px;
+            color: #fff;
+            text-transform: uppercase;
+            letter-spacing: 5px;
+            text-shadow: 0 0 20px #00d2ff;
+        }
+
+        h2 { color: #a4b0be; margin-bottom: 30px; }
+
+        .card-container { display: flex; gap: 20px; }
+
+        .selection-card {
+            background: linear-gradient(145deg, #2c3e50, #202d3a);
+            border: 2px solid #34495e;
+            padding: 25px;
+            border-radius: 15px;
+            cursor: pointer;
+            width: 200px;
+            transition: all 0.3s;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+        }
+
+        .selection-card:hover {
+            border-color: #00d2ff;
+            transform: translateY(-10px);
+            box-shadow: 0 0 25px rgba(0, 210, 255, 0.4);
+        }
+
+        .stat-bar { height: 8px; background: #444; margin: 8px 0; border-radius: 4px; overflow: hidden; }
+        .stat-fill { height: 100%; background: #00d2ff; }
+
+        /* HUD */
+        #hud-top {
+            position: absolute;
+            top: 20px;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 30px;
+            box-sizing: border-box;
+            pointer-events: none;
+            z-index: 5;
+            font-size: 1.5rem;
+            font-weight: 800;
+            text-shadow: 2px 2px 0 #fff;
+            color: #2c3e50;
+        }
+
+        #boost-meter-container {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            width: 200px;
+            height: 20px;
+            background: rgba(0,0,0,0.5);
+            border: 2px solid white;
+            border-radius: 10px;
+            overflow: hidden;
+            z-index: 5;
+            transform: skewX(-15deg);
+        }
+
+        #boost-fill {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #f1c40f, #e67e22);
+            transform-origin: left;
+        }
+
+        .controls-hint {
+            position: absolute;
+            bottom: 30px;
+            left: 30px;
+            color: #2c3e50;
+            font-weight: bold;
+            opacity: 0.7;
+        }
+    </style>
+</head>
+<body>
+
+<a href="myscratchpage.html" id="back-btn">← Back to Home</a>
+
+<div id="game-container">
+    <canvas id="gameCanvas" width="900" height="700"></canvas>
+    
+    <div id="hud-top" class="hidden">
+        <div>DIST: <span id="distDisplay">0</span>m</div>
+        <div id="timer">00:00.00</div>
+    </div>
+    
+    <div id="boost-meter-container" class="hidden">
+        <div id="boost-fill"></div>
+    </div>
+    <div class="controls-hint hidden" id="controls-hint">
+        ARROWS to Turn | SPACE to Boost
+    </div>
+
+    <div id="screen-map" class="ui-layer">
+        <h1>Alpine Rush</h1>
+        <h2>Select Your Terrain</h2>
+        <div class="card-container">
+            <div class="selection-card" onclick="selectMap('easy')">
+                <h3 style="color:#2ecc71">Green Circle</h3>
+                <p>Wide & Gentle</p>
+                <p>Low Curves</p>
+            </div>
+            <div class="selection-card" onclick="selectMap('medium')">
+                <h3 style="color:#3498db">Blue Square</h3>
+                <p>Narrower Trail</p>
+                <p>Moderate Curves</p>
+            </div>
+            <div class="selection-card" onclick="selectMap('hard')">
+                <h3 style="color:#000; -webkit-text-stroke: 1px white;">Black Diamond</h3>
+                <p>Tight & Fast</p>
+                <p>Extreme Curves</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="screen-skier" class="ui-layer hidden">
+        <h1>Select Skier</h1>
+        <div class="card-container">
+            <div class="selection-card" onclick="selectSkier('balanced')">
+                <div style="font-size: 4rem;">⛷️</div>
+                <h3>The Pro</h3>
+                <p>Control: <div class="stat-bar"><div class="stat-fill" style="width: 60%"></div></div></p>
+                <p>Speed: <div class="stat-bar"><div class="stat-fill" style="width: 60%"></div></div></p>
+            </div>
+            <div class="selection-card" onclick="selectSkier('speed')">
+                <div style="font-size: 4rem;">🚀</div>
+                <h3>Speed Demon</h3>
+                <p>Control: <div class="stat-bar"><div class="stat-fill" style="width: 30%; background: #e74c3c;"></div></div></p>
+                <p>Speed: <div class="stat-bar"><div class="stat-fill" style="width: 95%"></div></div></p>
+            </div>
+            <div class="selection-card" onclick="selectSkier('carver')">
+                <div style="font-size: 4rem;">🎿</div>
+                <h3>The Carver</h3>
+                <p>Control: <div class="stat-bar"><div class="stat-fill" style="width: 90%"></div></div></p>
+                <p>Speed: <div class="stat-bar"><div class="stat-fill" style="width: 40%"></div></div></p>
+            </div>
+        </div>
+    </div>
+
+    <div id="screen-gameover" class="ui-layer hidden">
+        <h1 id="go-title">WIPEOUT!</h1>
+        <h2 id="go-message">You hit a tree.</h2>
+        <h1 id="final-time" style="font-family: monospace; font-size: 4rem; color: yellow;"></h1>
+        <button class="selection-card" style="width: auto; background: #3498db; color: white;" onclick="location.reload()">Run It Again</button>
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Elements
+    const screenMap = document.getElementById('screen-map');
+    const screenSkier = document.getElementById('screen-skier');
+    const screenGameOver = document.getElementById('screen-gameover');
+    const hudTop = document.getElementById('hud-top');
+    const timerDisplay = document.getElementById('timer');
+    const boostMeter = document.getElementById('boost-meter-container');
+    const boostFill = document.getElementById('boost-fill');
+    const controlsHint = document.getElementById('controls-hint');
+
+    // State
+    let gameState = 'MENU';
+    let startTime = 0;
+    let frameId;
+    
+    // Physics & Map
+    let player = { x: 450, y: 100, vx: 0, vy: 0, angle: 0, boost: 100 };
+    let cameraY = 0;
+    let finishLineY = 0;
+    
+    // Objects
+    let trees = [];
+    let trailSegments = []; // Stores the "Groomed" path coordinates
+    let particles = []; // Snow spray
+
+    // Inputs
+    const keys = { ArrowLeft: false, ArrowRight: false, Space: false };
+    
+    // Configs
+    let currentMapConfig = {};
+    let currentSkierConfig = {};
+
+    const SKIER_TYPES = {
+        balanced: { maxSpeed: 10, turnRate: 0.6, friction: 0.94, boostRate: 0.5 },
+        speed: { maxSpeed: 14, turnRate: 0.3, friction: 0.97, boostRate: 0.3 },
+        carver: { maxSpeed: 8, turnRate: 0.9, friction: 0.92, boostRate: 0.8 }
+    };
+
+    const MAP_TYPES = {
+        easy: { length: 8000, curveFreq: 0.002, curveAmp: 100, width: 300, treeDensity: 0.4 },
+        medium: { length: 15000, curveFreq: 0.005, curveAmp: 200, width: 220, treeDensity: 0.6 },
+        hard: { length: 25000, curveFreq: 0.008, curveAmp: 300, width: 160, treeDensity: 0.9 }
+    };
+
+    // --- Input Listeners ---
+    window.addEventListener('keydown', (e) => {
+        if(e.code === 'ArrowLeft') keys.ArrowLeft = true;
+        if(e.code === 'ArrowRight') keys.ArrowRight = true;
+        if(e.code === 'Space') keys.Space = true;
+    });
+    window.addEventListener('keyup', (e) => {
+        if(e.code === 'ArrowLeft') keys.ArrowLeft = false;
+        if(e.code === 'ArrowRight') keys.ArrowRight = false;
+        if(e.code === 'Space') keys.Space = false;
+    });
+
+    // --- Initialization ---
+    function selectMap(type) {
+        currentMapConfig = MAP_TYPES[type];
+        screenMap.classList.add('hidden');
+        screenSkier.classList.remove('hidden');
+    }
+
+    function selectSkier(type) {
+        currentSkierConfig = SKIER_TYPES[type];
+        screenSkier.classList.add('hidden');
+        startGame();
+    }
+
+    function generateMap() {
+        trailSegments = [];
+        trees = [];
+        
+        const totalLen = currentMapConfig.length;
+        const width = currentMapConfig.width;
+        let centerX = canvas.width / 2;
+        
+        // 1. Generate the Winding Path (The "Groomed" run)
+        for (let y = 0; y < totalLen + 1000; y += 40) {
+            // Use Sine waves to create curves
+            let curve = Math.sin(y * currentMapConfig.curveFreq) * currentMapConfig.curveAmp;
+            
+            // Add some "Perlin-like" noise for randomness
+            let noise = Math.sin(y * 0.01) * 20; 
+            
+            let currentPathX = (canvas.width / 2) + curve + noise;
+            
+            trailSegments.push({
+                y: y,
+                x: currentPathX,
+                w: width
+            });
+
+            // 2. Generate Trees (Only in the "Powder" outside the path)
+            // Left Side Trees
+            if (Math.random() < currentMapConfig.treeDensity) {
+                // Random position from far left up to the path edge
+                let treeX = (Math.random() * (currentPathX - (width/2) - 40)); 
+                // Ensure we don't spawn negative (off screen left) unless we want to
+                if(treeX > -50) trees.push({ x: treeX, y: y + Math.random()*40, type: Math.random() > 0.8 ? '🌲' : '🌲' });
+            }
+            // Right Side Trees
+            if (Math.random() < currentMapConfig.treeDensity) {
+                let startX = currentPathX + (width/2) + 20;
+                let treeX = startX + (Math.random() * (canvas.width - startX));
+                if(treeX < canvas.width + 50) trees.push({ x: treeX, y: y + Math.random()*40, type: Math.random() > 0.8 ? '🌲' : '🌲' });
+            }
+        }
+        finishLineY = totalLen;
+    }
+
+    function startGame() {
+        gameState = 'PLAYING';
+        hudTop.classList.remove('hidden');
+        boostMeter.classList.remove('hidden');
+        controlsHint.classList.remove('hidden');
+        
+        generateMap();
+        
+        player.x = canvas.width / 2;
+        player.y = 100;
+        player.vx = 0;
+        player.vy = 0;
+        player.boost = 100;
+
+        startTime = Date.now();
+        gameLoop();
+    }
+
+    // --- Core Logic ---
+    function update() {
+        // Boost Logic
+        let maxSpeed = currentSkierConfig.maxSpeed;
+        if (keys.Space && player.boost > 0) {
+            maxSpeed *= 1.5; // Turbo speed
+            player.boost -= 2;
+            particles.push({x: player.x, y: player.y, vx: (Math.random()-0.5)*2, vy: -5, life: 20, color: 'orange'});
+        } else if (player.boost < 100) {
+            player.boost += 0.2; // Recharge
+        }
+        boostFill.style.width = player.boost + "%";
+
+        // Movement
+        if (keys.ArrowLeft) player.vx -= currentSkierConfig.turnRate;
+        if (keys.ArrowRight) player.vx += currentSkierConfig.turnRate;
+
+        // Friction & Gravity
+        player.vx *= currentSkierConfig.friction; 
+        if (player.vy < maxSpeed) player.vy += 0.2; // Gravity
+        
+        player.x += player.vx;
+        player.y += player.vy;
+
+        // Tilt Angle (Visual)
+        player.angle = player.vx * 3;
+
+        // Camera Follow
+        cameraY = player.y - 200;
+
+        // Particles (Snow spray)
+        if (Math.abs(player.vx) > 1) {
+            particles.push({
+                x: player.x, 
+                y: player.y, 
+                vx: -player.vx * 0.5 + (Math.random() - 0.5), 
+                vy: -player.vy * 0.5, 
+                life: 30,
+                color: 'white'
+            });
+        }
+
+        // Particle Update
+        for(let i = particles.length - 1; i >= 0; i--) {
+            let p = particles[i];
+            p.x += p.vx;
+            p.y += p.vy;
+            p.life--;
+            if(p.life <= 0) particles.splice(i, 1);
+        }
+
+        // Collision Check
+        // Find segment closest to player
+        // Simplified collision: Just check trees
+        for (let tree of trees) {
+            if (tree.y > player.y - 50 && tree.y < player.y + 50) {
+                // Tree Hitbox (Smaller than visual)
+                if (Math.abs(player.x - tree.x) < 20 && Math.abs(player.y - tree.y) < 20) {
+                    endGame(false);
+                    return;
+                }
+            }
+        }
+
+        // Finish Line
+        if (player.y >= finishLineY) {
+            endGame(true);
+            return;
+        }
+
+        // Timer Update
+        const now = Date.now();
+        const diff = now - startTime;
+        const m = Math.floor(diff / 60000);
+        const s = Math.floor((diff % 60000) / 1000);
+        const ms = Math.floor((diff % 1000) / 10);
+        timerDisplay.innerText = `${m}:${s < 10 ? '0'+s : s}.${ms < 10 ? '0'+ms : ms}`;
+        document.getElementById('distDisplay').innerText = Math.max(0, Math.floor((finishLineY - player.y)/10));
+    }
+
+    function draw() {
+        // Clear background (Deep powder color)
+        ctx.fillStyle = '#deeef5'; 
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.save();
+        ctx.translate(0, -cameraY);
+
+        // 1. Draw Trail (Groomed Snow)
+        ctx.fillStyle = '#ffffff'; // Bright white for groomed
+        ctx.beginPath();
+        // Optimization: Only draw visible segments
+        const startIdx = Math.floor(cameraY / 40);
+        const endIdx = startIdx + 25; // Draw slightly past screen
+        
+        for(let i = Math.max(0, startIdx); i < Math.min(trailSegments.length, endIdx); i++) {
+            let seg = trailSegments[i];
+            // Draw a quad for smooth path
+            if (i < trailSegments.length - 1) {
+                let next = trailSegments[i+1];
+                ctx.moveTo(seg.x - seg.w/2, seg.y);
+                ctx.lineTo(seg.x + seg.w/2, seg.y);
+                ctx.lineTo(next.x + next.w/2, next.y);
+                ctx.lineTo(next.x - next.w/2, next.y);
+            }
+        }
+        ctx.fill();
+
+        // 2. Draw Finish Line
+        ctx.fillStyle = 'rgba(231, 76, 60, 0.6)';
+        ctx.fillRect(0, finishLineY, canvas.width, 50);
+        ctx.font = "40px Arial";
+        ctx.textAlign = "center";
+        ctx.fillStyle = "white";
+        ctx.fillText("FINISH", canvas.width/2, finishLineY + 40);
+
+        // 3. Draw Trees
+        ctx.font = '40px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        for (let tree of trees) {
+            // Culling (Only draw visible trees)
+            if (tree.y > cameraY - 100 && tree.y < cameraY + 800) {
+                // Scale tree slightly for "3D" effect if needed, but simple is fine
+                ctx.fillText(tree.type, tree.x, tree.y);
+            }
+        }
+
+        // 4. Draw Particles
+        for (let p of particles) {
+            ctx.fillStyle = p.color;
+            ctx.globalAlpha = p.life / 30;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 3, 0, Math.PI*2);
+            ctx.fill();
+        }
+        ctx.globalAlpha = 1.0;
+
+        // 5. Draw Player
+        ctx.save();
+        ctx.translate(player.x, player.y);
+        ctx.rotate(player.angle * Math.PI / 180);
+        ctx.font = '35px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('⛷️', 0, 0);
+        ctx.restore();
+
+        // Speed Lines (Effect)
+        if (player.vy > 12) {
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.lineWidth = 2;
+            for(let i=0; i<5; i++) {
+                let lx = player.x + (Math.random() - 0.5) * 100;
+                let ly = player.y - 100 + Math.random() * 200;
+                ctx.beginPath();
+                ctx.moveTo(lx, ly);
+                ctx.lineTo(lx, ly - 50); // Line trailing up
+                ctx.stroke();
+            }
+        }
+
+        ctx.restore();
+    }
+
+    function gameLoop() {
+        if (gameState === 'PLAYING') {
+            update();
+            draw();
+            frameId = requestAnimationFrame(gameLoop);
+        }
+    }
+
+    function endGame(win) {
+        gameState = 'GAMEOVER';
+        cancelAnimationFrame(frameId);
+        screenGameOver.classList.remove('hidden');
+        hudTop.classList.add('hidden');
+        boostMeter.classList.add('hidden');
+
+        if(win) {
+            document.getElementById('go-title').innerText = "RUN COMPLETE!";
+            document.getElementById('go-title').style.color = "#2ecc71";
+            document.getElementById('go-message').innerText = "Great skiing!";
+            document.getElementById('final-time').innerText = timerDisplay.innerText;
+        } else {
+            document.getElementById('go-title').innerText = "WIPEOUT!";
+            document.getElementById('go-title').style.color = "#e74c3c";
+            document.getElementById('go-message').innerText = "You hit a tree!";
+            document.getElementById('final-time').innerText = "DNF";
+        }
+    }
+</script>
+</body>
+</html>

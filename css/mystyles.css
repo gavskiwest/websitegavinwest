@@ -1,0 +1,32 @@
+h1 {
+    font-family: 'Nunito', sans-serif;
+    letter-spacing: 0.2rem;
+    background-color: whitesmoke !important;
+}
+a {
+    color: darkolivegreen;
+}
+.text-primary {
+    color: black !important;
+}
+.btn-primary {
+    background-color: darkgray;
+    border-color: darkolivegreen;
+}
+.btn-primary:hover {
+    background-color: white;
+    border-color: darkolivegreen;
+    color: darkgray;
+}
+.masthead {
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.3) 0%, rgba(37, 99, 235, 0.2) 75%, black 100%), url("../assets/img/bg-masthead.jpg");
+}
+#mainNav {
+    font-family: 'Nunito', sans-serif; 
+}
+p{
+    font-size: larger;
+}
+.about-section {
+    background: linear-gradient(to bottom, black 0%, black 100%);
+}
